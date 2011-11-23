@@ -1,3 +1,8 @@
+NOTE
+====
+
+This is a port to Jackson from Gson of https://github.com/algesten/jsondiff
+
 Structural JSON diff/patch tool
 ===============================
 
