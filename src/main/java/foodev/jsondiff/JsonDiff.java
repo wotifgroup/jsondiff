@@ -1,18 +1,21 @@
 package foodev.jsondiff;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonParser.Feature;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 import foodev.jsondiff.incava.IncavaDiff;
 import foodev.jsondiff.incava.IncavaEntry;
@@ -20,7 +23,7 @@ import foodev.jsondiff.incava.IncavaEntry;
 
 /**
  * Util for comparing two json-objects and create a new object with a set of instructions to transform the first to the
- * second. The output of this util can be fed into {@link JsonPatch#apply(JsonObject, JsonObject)}.
+ * second. The output of this util can be fed into {@link JsonPatch#apply(ObjectNode, ObjectNode)}.
  * 
  * <p>
  * Syntax for instructions:
@@ -51,27 +54,31 @@ import foodev.jsondiff.incava.IncavaEntry;
  */
 public class JsonDiff {
 
-    final static JsonParser JSON = new JsonParser();
+    final static ObjectMapper JSON = new ObjectMapper();
 
 
     public static String diff(String from, String to) {
-
-        JsonElement fromEl = JSON.parse(from);
-        JsonElement toEl = JSON.parse(to);
-
-        if (!fromEl.isJsonObject()) {
-            throw new IllegalArgumentException("From can't be parsed to json object");
+      
+        try {
+            JsonNode fromEl = JSON.readTree(from);
+            JsonNode toEl = JSON.readTree(to);
+    
+            if (!fromEl.isObject()) {
+                throw new IllegalArgumentException("From can't be parsed to json object");
+            }
+            if (!toEl.isObject()) {
+                throw new IllegalArgumentException("To can't be parsed to json object");
+            }
+    
+            return diff((ObjectNode) fromEl, (ObjectNode) toEl).toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to diff JSON strings.", e);
         }
-        if (!toEl.isJsonObject()) {
-            throw new IllegalArgumentException("To can't be parsed to json object");
-        }
-
-        return diff((JsonObject) fromEl, (JsonObject) toEl).toString();
-
+            
     }
 
 
-    public static JsonObject diff(JsonObject from, JsonObject to) {
+    public static ObjectNode diff(ObjectNode from, ObjectNode to) {
 
         Root fromRoot = new Root();
         Root toRoot = new Root();
@@ -86,7 +93,7 @@ public class JsonDiff {
 
         List<IncavaEntry> ipatch = idiff.diff();
 
-        JsonObject patch = new JsonObject();
+        ObjectNode patch = JSON.createObjectNode();
 
         buildPatch(patch, ipatch, fromLeaves, toLeaves);
 
@@ -95,7 +102,7 @@ public class JsonDiff {
     }
 
 
-    private static void buildPatch(JsonObject patch, List<IncavaEntry> diff,
+    private static void buildPatch(ObjectNode patch, List<IncavaEntry> diff,
             ArrayList<Leaf> from, ArrayList<Leaf> to) {
 
         // quick lookups to check whether a key/index has been added or deleted
@@ -176,10 +183,10 @@ public class JsonDiff {
     }
 
 
-    private static void addInstruction(JsonObject patch, Leaf leaf, boolean isInDeleted, boolean isInAdded) {
+    private static void addInstruction(ObjectNode patch, Leaf leaf, boolean isInDeleted, boolean isInAdded) {
 
         ArrayList<Node> path = leaf.toPath();
-        JsonObject cur = patch;
+        ObjectNode cur = patch;
         StringBuilder keyBld = new StringBuilder();
 
         int last = path.size() - 1;
@@ -191,12 +198,12 @@ public class JsonDiff {
 
             String key = keyBld.toString();
 
-            JsonObject tmp;
+            ObjectNode tmp;
             if (cur.has(key)) {
-                tmp = cur.getAsJsonObject(key);
+                tmp = (ObjectNode) cur.get(key);
             } else {
-                tmp = new JsonObject();
-                cur.add(key, tmp);
+                tmp = JSON.createObjectNode();
+                cur.put(key, tmp);
             }
 
             cur = tmp;
@@ -222,13 +229,13 @@ public class JsonDiff {
 
             }
 
-            cur.add(keyBld.toString(), leaf.val);
+            cur.put(keyBld.toString(), leaf.val);
 
 
         } else if (isInDeleted) {
 
             keyBld.insert(0, '-');
-            cur.addProperty(keyBld.toString(), 0);
+            cur.put(keyBld.toString(), 0);
 
         }
 
@@ -255,25 +262,22 @@ public class JsonDiff {
     }
 
 
-    private static void findLeaves(Node parent, JsonElement el, List<Leaf> leaves) {
+    private static void findLeaves(Node parent, JsonNode el, List<Leaf> leaves) {
 
         leaves.add(new Leaf(parent, el));
 
-        if (el.isJsonObject()) {
+        if (el.isObject()) {
 
-            Set<Entry<String, JsonElement>> memb = new TreeSet<Entry<String, JsonElement>>(ENTRY_COMPARATOR);
-            memb.addAll(((JsonObject) el).entrySet());
-
-            for (Entry<String, JsonElement> e : memb) {
-
+            for (Iterator<Entry<String, JsonNode>> i = el.getFields(); i.hasNext(); ) {
+                Entry<String, JsonNode> e = i.next();
                 ObjNode newParent = new ObjNode(parent, e.getKey());
                 findLeaves(newParent, e.getValue(), leaves);
 
             }
 
-        } else if (el.isJsonArray()) {
+        } else if (el.isArray()) {
 
-            JsonArray arr = (JsonArray) el;
+            ArrayNode arr = (ArrayNode) el;
 
             for (int i = 0, n = arr.size(); i < n; i++) {
 
@@ -288,10 +292,10 @@ public class JsonDiff {
     }
 
 
-    private static Comparator<Entry<String, JsonElement>> ENTRY_COMPARATOR = new Comparator<Entry<String, JsonElement>>() {
+    private static Comparator<Entry<String, JsonNode>> ENTRY_COMPARATOR = new Comparator<Entry<String, JsonNode>>() {
 
         @Override
-        public int compare(Entry<String, JsonElement> o1, Entry<String, JsonElement> o2) {
+        public int compare(Entry<String, JsonNode> o1, Entry<String, JsonNode> o2) {
 
             return o1.getKey().compareTo(o2.getKey());
 
@@ -302,12 +306,12 @@ public class JsonDiff {
     private static class Leaf implements Comparable<Leaf> {
 
         Node parent;
-        JsonElement val;
+        JsonNode val;
         Integer hash;
         ArrayList<Node> path;
 
 
-        Leaf(Node parent, JsonElement val) {
+        Leaf(Node parent, JsonNode val) {
             this.parent = parent;
             this.val = val;
         }
@@ -362,7 +366,7 @@ public class JsonDiff {
                 return hash;
             }
             int i = parent.hashCode();
-            i = i * 31 + (val.isJsonPrimitive() || val.isJsonNull() ? val.hashCode() : 0);
+            i = i * 31 + (val.isValueNode() || val.isNull() ? val.hashCode() : 0);
             hash = i;
             return hash;
         }

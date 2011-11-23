@@ -2,13 +2,16 @@ package foodev.jsondiff;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeSet;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
-import com.google.gson.JsonObject;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.MissingNode;
+import org.codehaus.jackson.node.NullNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * Patch tool for differences as produced by {@link JsonDiff#diff(String, String)}.
@@ -47,40 +50,41 @@ import com.google.gson.JsonObject;
 public class JsonPatch {
 
 
-    private final static JsonNull JNULL = new JsonNull();
-
-
     public static String apply(String orig, String patch) throws IllegalArgumentException {
 
-        JsonElement origEl = JsonDiff.JSON.parse(orig);
-        JsonElement patchEl = JsonDiff.JSON.parse(patch);
-
-        if (!origEl.isJsonObject()) {
-            throw new IllegalArgumentException("Orig can't be parsed to json object");
+        try {
+            JsonNode origEl = JsonDiff.JSON.readTree(orig);
+            JsonNode patchEl = JsonDiff.JSON.readTree(patch);
+    
+            if (!origEl.isObject()) {
+                throw new IllegalArgumentException("Orig can't be parsed to json object");
+            }
+            if (!patchEl.isObject()) {
+                throw new IllegalArgumentException("Patch can't be parsed to json object");
+            }
+    
+            apply((ObjectNode) origEl, (ObjectNode) patchEl);
+    
+            return origEl.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to apply patch.", e);
         }
-        if (!patchEl.isJsonObject()) {
-            throw new IllegalArgumentException("Patch can't be parsed to json object");
-        }
-
-        apply((JsonObject) origEl, (JsonObject) patchEl);
-
-        return origEl.toString();
 
     }
 
 
-    public static void apply(JsonObject orig, JsonObject patch) throws IllegalArgumentException {
+    public static void apply(ObjectNode orig, ObjectNode patch) throws IllegalArgumentException {
 
         TreeSet<Instruction> instructions = new TreeSet<Instruction>();
-
-        for (Entry<String, JsonElement> entry : patch.entrySet()) {
+        for (Iterator<Entry<String, JsonNode>> i = patch.getFields(); i.hasNext(); ) {
+            Entry<String, JsonNode> entry = i.next();
             instructions.add(new Instruction(entry.getKey(), entry.getValue()));
         }
 
         for (Instruction instr : instructions) {
 
-            JsonElement obj = orig.get(instr.key);
-            JsonArray arr = null;
+            JsonNode obj = orig.get(instr.key);
+            ArrayNode arr = null;
             int lastIndex = -1;
             boolean grew = false;
 
@@ -95,22 +99,22 @@ public class JsonPatch {
 
                     int idx = instr.index.get(j);
 
-                    if (obj != null && obj.isJsonArray()) {
+                    if (obj != null && obj.isArray()) {
 
-                        arr = (JsonArray) obj;
+                        arr = (ArrayNode) obj;
                         grew = arrEnsureLength(arr, idx);
 
                         obj = arr.get(idx);
 
                     } else if (instr.oper != '-') {
 
-                        JsonArray tmp = new JsonArray();
+                        ArrayNode tmp = JsonDiff.JSON.createArrayNode();
                         grew = arrEnsureLength(tmp, idx);
 
                         if (first) {
-                            orig.add(instr.key, tmp);
+                            orig.put(instr.key, tmp);
                         } else {
-                            arrSet(arr, idx, tmp);
+                            arr.set(idx, tmp);
                         }
 
                         arr = tmp;
@@ -136,10 +140,10 @@ public class JsonPatch {
                 // looking out for objects and arrays since those
                 // are the only two being merged.
 
-                if (instr.el.isJsonObject()) {
+                if (instr.el.isObject()) {
 
-                    if (obj != null && obj.isJsonObject() && instr.el.isJsonObject()) {
-                        apply((JsonObject) obj, (JsonObject) instr.el);
+                    if (obj != null && obj.isObject() && instr.el.isObject()) {
+                        apply((ObjectNode) obj, (ObjectNode) instr.el);
                         continue;
                     }
 
@@ -151,7 +155,7 @@ public class JsonPatch {
 
                 if (arr != null) {
 
-                    arrRemove(arr, lastIndex);
+                    arr.remove(lastIndex);
 
                 } else {
 
@@ -169,18 +173,18 @@ public class JsonPatch {
 
                 if (instr.arrayInsert && !grew) {
 
-                    arrInsert(arr, lastIndex, instr.el);
+                    arr.insert(lastIndex, instr.el);
 
                 } else {
 
-                    arrSet(arr, lastIndex, instr.el);
+                    arr.set(lastIndex, instr.el);
 
                 }
 
             } else {
 
                 // key replacement
-                orig.add(instr.key, instr.el);
+                orig.put(instr.key, instr.el);
 
             }
 
@@ -235,74 +239,18 @@ public class JsonPatch {
     }
 
 
-    private static void arrInsert(JsonArray arr, int index, JsonElement el) {
-
-        ArrayList<JsonElement> elements = getElements(arr);
-
-        elements.add(index, el);
-
-    }
-
-
-    private static void arrRemove(JsonArray arr, int index) {
-
-        ArrayList<JsonElement> elements = getElements(arr);
-
-        elements.remove(index);
-
-    }
-
-
-    private static boolean arrEnsureLength(JsonArray arr, int idx) {
-
-        ArrayList<JsonElement> elements = getElements(arr);
-
+    private static boolean arrEnsureLength(ArrayNode arr, int idx) {
+        
         int len = idx + 1;
 
         boolean grew = false;
 
-        while (elements.size() < len) {
-            elements.add(JNULL);
+        while (arr.size() < len) {
+            arr.addNull();
             grew = true;
         }
 
         return grew;
-
-    }
-
-
-    private static void arrSet(JsonArray arr, Integer index, JsonElement el) {
-
-        ArrayList<JsonElement> elements = getElements(arr);
-
-        elements.set(index, el);
-
-    }
-
-
-    private final static Field JsonArray_elements;
-
-
-    static {
-
-        try {
-            JsonArray_elements = JsonArray.class.getDeclaredField("elements");
-            JsonArray_elements.setAccessible(true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-    }
-
-
-    @SuppressWarnings("unchecked")
-    private static ArrayList<JsonElement> getElements(JsonArray arr) {
-
-        try {
-            return (ArrayList<JsonElement>) JsonArray_elements.get(arr);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
 
     }
 
@@ -346,10 +294,10 @@ public class JsonPatch {
         final ArrayList<Integer> index;
         final boolean arrayInsert;
         final char oper;
-        final JsonElement el;
+        final JsonNode el;
 
 
-        public Instruction(String str, JsonElement el) {
+        public Instruction(String str, JsonNode el) {
 
             this.orig = str;
             this.el = el;
