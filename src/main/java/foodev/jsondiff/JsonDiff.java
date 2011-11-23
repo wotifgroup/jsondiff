@@ -68,7 +68,7 @@ public class JsonDiff {
                 throw new IllegalArgumentException("To can't be parsed to json object");
             }
     
-            return diff((ObjectNode) fromEl, (ObjectNode) toEl).toString();
+            return diff(fromEl, toEl).toString();
         } catch (Exception e) {
             throw new RuntimeException("Unable to diff JSON strings.", e);
         }
@@ -76,7 +76,7 @@ public class JsonDiff {
     }
 
 
-    public static ObjectNode diff(ObjectNode from, ObjectNode to) {
+    public static ObjectNode diff(JsonNode from, JsonNode to) {
 
         Root fromRoot = new Root();
         Root toRoot = new Root();
