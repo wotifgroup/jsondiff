@@ -49,7 +49,7 @@
 
     <scm>
         <connection>scm:git:git://github.com/wotifgroup/jsondiff.git</connection>
-        <developerConnection>scm:git:git://github.com/wotifgroup/jsondiff.git</developerConnection>
+        <developerConnection>scm:git:git@github.com:wotifgroup/jsondiff.git</developerConnection>
     </scm>
 
     <repositories>
