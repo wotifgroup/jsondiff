@@ -2,7 +2,7 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>foodev</groupId>
+    <groupId>com.wotifgroup</groupId>
     <artifactId>jsondiff</artifactId>
     <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
@@ -48,14 +48,14 @@
     </dependencies>
 
     <scm>
-        <connection>scm:git:git://github.com/algesten/jsondiff.git</connection>
-        <developerConnection>scm:git:git://github.com/algesten/jsondiff.git</developerConnection>
+        <connection>scm:git:git://github.com/wotifgroup/jsondiff.git</connection>
+        <developerConnection>scm:git:git://github.com/wotifgroup/jsondiff.git</developerConnection>
     </scm>
 
     <repositories>
         <repository>
-            <id>algesten</id>
-            <url>http://algesten.github.com/maven2/releases</url>
+            <id>wotifgroup</id>
+            <url>http://wotifgroup.github.com/maven2/releases</url>
         </repository>
     </repositories>
 
