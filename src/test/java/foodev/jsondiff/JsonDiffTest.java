@@ -262,10 +262,10 @@ public class JsonDiffTest {
     @Test
     public void testArrayInsertTwoAfterDeleted() {
 
-        String d = JsonDiff.diff("{\"a\": ['a','b','d']}", "{\"a\":['a','c','e','d']}");
+        String d = JsonDiff.diff("{\"a\": [\"a\",\"b\",\"d\"]}", "{\"a\":[\"a\",\"c\",\"e\",\"d\"]}");
         Assert.assertEquals("{\"a[1]\":\"c\",\"a[+2]\":\"e\"}", d);
 
-        String p = JsonPatch.apply("{\"a\": ['a','b','d']}", d);
+        String p = JsonPatch.apply("{\"a\": [\"a\",\"b\",\"d\"]}", d);
         Assert.assertEquals("{\"a\":[\"a\",\"c\",\"e\",\"d\"]}", p);
 
     }
@@ -457,7 +457,7 @@ public class JsonDiffTest {
         String d = JsonDiff.diff("{\"a\": [1,2], \"b\": { \"foo\": \"b\"}, \"c\": 42}", "{\"a\": 1, \"b\": {\"foo\": \"b\", \"bar\": 42}, \"c\": 45}");
         Assert.assertEquals("{\"a\":1,\"~b\":{\"bar\":42},\"c\":45}", d);
 
-        String p = JsonPatch.apply("{\"a\": [1,2], \"b\": { \"foo\": 'b'}, \"c\": 42}", d);
+        String p = JsonPatch.apply("{\"a\": [1,2], \"b\": { \"foo\": \"b\"}, \"c\": 42}", d);
         Assert.assertEquals("{\"a\":1,\"b\":{\"foo\":\"b\",\"bar\":42},\"c\":45}", p);
 
     }

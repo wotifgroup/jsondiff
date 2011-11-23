@@ -66,6 +66,9 @@ public class JsonPatch {
             apply((ObjectNode) origEl, (ObjectNode) patchEl);
     
             return origEl.toString();
+            
+        } catch (IllegalArgumentException iae) {
+            throw iae;
         } catch (Exception e) {
             throw new RuntimeException("Unable to apply patch.", e);
         }
