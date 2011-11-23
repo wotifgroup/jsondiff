@@ -1,6 +1,5 @@
 package foodev.jsondiff;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -8,11 +7,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonParser.Feature;
-import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
@@ -268,8 +266,12 @@ public class JsonDiff {
 
         if (el.isObject()) {
 
+            Set<Entry<String, JsonNode>> memb = new TreeSet<Entry<String, JsonNode>>(ENTRY_COMPARATOR);
             for (Iterator<Entry<String, JsonNode>> i = el.getFields(); i.hasNext(); ) {
-                Entry<String, JsonNode> e = i.next();
+                memb.add(i.next());
+            }
+
+            for (Entry<String, JsonNode> e : memb) {
                 ObjNode newParent = new ObjNode(parent, e.getKey());
                 findLeaves(newParent, e.getValue(), leaves);
 
