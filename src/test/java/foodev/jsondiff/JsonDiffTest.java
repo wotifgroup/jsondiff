@@ -390,6 +390,27 @@ public class JsonDiffTest {
 
     }
 
+    @Test
+    public void testArrayRotateLeft() {
+
+        String d = JsonDiff.diff("{\"a\": [1,2,3,4]}", "{\"a\":[2,3,4,5]}");
+        Assert.assertEquals("{\"-a[0]\":0,\"a[+3]\":5}", d);
+
+        String p = JsonPatch.apply("{\"a\": [1,2,3,4]}", d);
+        Assert.assertEquals("{\"a\":[2,3,4,5]}", p);
+
+    }
+
+    @Test
+    public void testArrayRotateRight() {
+
+        String d = JsonDiff.diff("{\"a\": [1,2,3,4]}", "{\"a\":[0,1,2,3]}");
+        Assert.assertEquals("{\"a[+0]\":0,\"-a[3]\":0}", d);
+
+        String p = JsonPatch.apply("{\"a\": [1,2,3,4]}", d);
+        Assert.assertEquals("{\"a\":[0,1,2,3]}", p);
+
+    }
 
     @Test
     public void testAddObjectToArray() {
