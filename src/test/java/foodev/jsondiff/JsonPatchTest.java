@@ -132,14 +132,10 @@ public class JsonPatchTest {
     }
 
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testArrayAddBad() {
 
-        try {
-            JsonPatch.apply("{}", "{\"a[bad]\": 2}");
-            Assert.fail();
-        } catch (IllegalArgumentException e) {
-        }
+        JsonPatch.apply("{}", "{\"a[bad]\": 2}");
 
     }
 
@@ -226,13 +222,10 @@ public class JsonPatchTest {
     }
 
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testArrRemoveInsertMiddle() {
-        try {
-            JsonPatch.apply("{\"a\":[0,1,2]}", "{\"-a[+1]\":null}");
-            Assert.fail();
-        } catch (IllegalArgumentException ie) {
-        }
+        JsonPatch.apply("{\"a\":[0,1,2]}", "{\"-a[+1]\":null}");
+        Assert.fail();
     }
 
 
@@ -250,13 +243,9 @@ public class JsonPatchTest {
     }
 
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testArrObjMergeInsert() {
-        try {
-            JsonPatch.apply("{\"a\":[0,{\"b\":1},3]}", "{\"~a[+1]\":{\"c\":2}}");
-            Assert.fail();
-        } catch (IllegalArgumentException ie) {
-        }
+        JsonPatch.apply("{\"a\":[0,{\"b\":1},3]}", "{\"~a[+1]\":{\"c\":2}}");
     }
 
 }

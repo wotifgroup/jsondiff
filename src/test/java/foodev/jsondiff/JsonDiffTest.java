@@ -483,4 +483,12 @@ public class JsonDiffTest {
 
     }
 
+    @Test
+    public void testFieldOrderInsensitive() {
+
+        String d = JsonDiff.diff("{\"a\": 1, \"b\": 2}", "{\"b\": 2, \"a\": 1}");
+        Assert.assertEquals("{}", d);
+
+    }
+    
 }
