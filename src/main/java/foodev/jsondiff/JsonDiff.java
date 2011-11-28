@@ -115,11 +115,14 @@ public class JsonDiff {
             ArrayList<Leaf> from, ArrayList<Leaf> to) {
 
         // quick lookups to check whether a key/index has been added or deleted
+        // these hash codes are "index position aware" which means there's no risk
+        // of confusing position independent array positions.
         HashSet<Integer> deletions = new HashSet<Integer>();
         HashSet<Integer> additions = new HashSet<Integer>();
 
         // holds added instructions to check for double additions (where a deep addition is
-        // superfluous since a parent has been added).
+        // superfluous since a parent has been added). This also holds hash codes where
+        // index is used.
         HashSet<Integer> added = new HashSet<Integer>();
 
         for (IncavaEntry d : diff) {
@@ -488,7 +491,7 @@ public class JsonDiff {
 
     private static abstract class Node {
 
-        Node parent;
+        final Node parent;
         int hash = -1;
 
 
@@ -519,7 +522,7 @@ public class JsonDiff {
 
     private static class ObjNode extends Node {
 
-        String key;
+        final String key;
 
         ArrNode subindex;
 
@@ -532,7 +535,7 @@ public class JsonDiff {
 
         @Override
         protected int doHash(boolean indexed) {
-            int i = parent.hashCode();
+            int i = parent.doHash(indexed);
             i = i * 31 + key.hashCode();
             return i;
         }
@@ -563,7 +566,7 @@ public class JsonDiff {
 
         @Override
         protected int doHash(boolean indexed) {
-            int i = parent.hashCode();
+            int i = parent.doHash(indexed);
             i = i * 31 + ArrNode.class.hashCode();
             if (indexed) {
                 i = i * 31 + index;
