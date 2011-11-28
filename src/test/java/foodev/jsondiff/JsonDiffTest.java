@@ -557,5 +557,18 @@ public class JsonDiffTest {
 
     }
 
-    
+    // Bug #2, thanks to deverton
+    @Test
+    public void testArrayObjectsChangeField() {
+        String from = "{\"a\":[{\"c\":2,\"d\":3},{\"c\":2,\"d\":3},{\"c\":2,\"d\":3},{\"c\":2,\"d\":3}]}";
+        String to = "{\"a\":[{\"c\":2,\"d\":4},{\"c\":2,\"d\":5},{\"c\":2,\"d\":3},{\"c\":2,\"d\":6}]}";
+        String diff = "{\"~a[0]\":{\"d\":4},\"~a[1]\":{\"d\":5},\"~a[3]\":{\"d\":6}}";
+
+        String d = JsonDiff.diff(from, to);
+        Assert.assertEquals(diff, d);
+
+        String p = JsonPatch.apply(from, diff);
+        Assert.assertEquals(to, p);
+    }
+
 }
